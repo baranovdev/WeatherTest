@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">WeatherTest</string>
+    <string name="percent">%d \%%</string>
+    <string name="miles_per_hour">%.1f mph</string>
+    <string name="degree">%.1f °F</string>
+    <string name="search_city">Search city</string>
+</resources>
