@@ -32,47 +32,68 @@ class WeatherFragment : Fragment(R.layout.fragment_weather), MavericksView{
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentWeatherBinding.inflate(inflater, container, false).apply {
             handler = this@WeatherFragment
         }
-
         return binding.root
     }
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        setControllers()
+        setListeners()
+    }
+
+    private fun setControllers() {
         cityEpoxyController = CityEpoxyController(viewModel)
         forecastEpoxyController = ForecastEpoxyController()
-
-
-        binding.tilSearch.editText?.doOnTextChanged { text, start, before, count ->
-            if(!text.isNullOrEmpty() && text.length > 2) viewModel.searchCity(text.toString())
-        }
-
-        binding.ivSearch.setOnClickListener { viewModel.openSearch() }
-        binding.rvForecast.layoutManager = GridLayoutManager(requireContext(), 3)
         if(cityEpoxyController != null) binding.rvSearchCities.setController(cityEpoxyController!!)
         if(forecastEpoxyController != null) binding.rvForecast.setController(forecastEpoxyController!!)
+    }
 
-//        binding.rvForecast.layoutManager = getLayoutManager()
+    private fun setListeners() {
+        binding.tilSearch.editText?.doOnTextChanged { text, start, before, count ->
+            if (!text.isNullOrEmpty() && text.length > 2) viewModel.searchCity(text.toString())
+        }
+        binding.buttonBack.setOnClickListener {
+            viewModel.hideSearch()
+            hideKeyboard()
+        }
+        binding.ivSearch.setOnClickListener {
+            viewModel.openSearch()
+        }
+        binding.rvForecast.layoutManager = GridLayoutManager(requireContext(), 3)
     }
 
     override fun invalidate(): Unit = withState(viewModel) { state ->
-        if(state.weather.complete){
-            binding.progressCircular.visibility = View.GONE
-            binding.weather = state.weather.invoke()
-            Glide.with(requireContext()).load(state.weather.invoke()?.current?.condition?.icon).override(120,120).into(binding.ivWeatherIcon)
-        }
+        if(state.weather.complete) updateWeatherUi(state)
         if(!state.isSearchVisible) hideKeyboard()
-        binding.mcvSearch.isVisible = state.isSearchVisible
+        if(state.cities.complete) updateCitiesUi(state)
+        if(state.forecast.complete) updateForecastUi(state)
+        setSearhVisibility(state)
+    }
 
-        if(state.cities.complete){
-            cityEpoxyController?.setData(state.cities.invoke())
-        }
-        if(state.forecast.complete){
-            forecastEpoxyController?.setData(state.forecast.invoke())
-        }
+    private fun updateForecastUi(state: WeatherState) {
+        binding.progressCircular.visibility = View.GONE
+        binding.layoutContent.visibility = View.VISIBLE
+        forecastEpoxyController?.setData(state.forecast.invoke())
+    }
+
+    private fun updateCitiesUi(state: WeatherState) {
+        cityEpoxyController?.setData(state.cities.invoke())
+    }
+
+    private fun setSearhVisibility(state: WeatherState) {
+        binding.mcvSearch.isVisible = state.isSearchVisible
+    }
+
+    private fun updateWeatherUi(state: WeatherState) {
+        binding.progressCircular.visibility = View.GONE
+        binding.layoutContent.visibility = View.VISIBLE
+        binding.weather = state.weather.invoke()
+        Glide.with(requireContext()).load(state.weather.invoke()?.current?.condition?.icon)
+            .override(120, 120).into(binding.ivWeatherIcon)
     }
 
     private fun hideKeyboard() {
@@ -80,7 +101,5 @@ class WeatherFragment : Fragment(R.layout.fragment_weather), MavericksView{
             requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         inputMethodManager.hideSoftInputFromWindow(view?.windowToken, 0)
     }
-
-    private fun getLayoutManager() = GridLayoutManager(requireContext(), 3)
 
 }
